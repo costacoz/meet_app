@@ -68,6 +68,7 @@
 //   }
 // }
 import 'package:flutter/material.dart';
+import 'package:gtk_flutter/helpers/attending.dart';
 import 'package:gtk_flutter/src/widgets.dart';
 
 import '../main.dart';
