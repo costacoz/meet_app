@@ -1,13 +1,23 @@
 import 'dart:async';
-import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'package:flutter/material.dart';
+import 'package:gtk_flutter/widgets/guestbookmessage.dart';
+
 import '../main.dart';
 import '../src/widgets.dart';
 
 class GuestBook extends StatefulWidget {
-  const GuestBook({required this.addMessage, required this.messages});
+  const GuestBook({
+    required this.addMessage,
+    required this.messages,
+    required this.deleteMessage,
+    this.userUid,
+  });
+
   final FutureOr<void> Function(String message) addMessage;
   final List<GuestBookMessage> messages;
+  final String? userUid;
+  final Function deleteMessage;
 
   @override
   _GuestBookState createState() => _GuestBookState();
@@ -64,9 +74,18 @@ class _GuestBookState extends State<GuestBook> {
         ),
         const SizedBox(height: 8),
         for (var message in widget.messages)
-          Paragraph('${message.name}: ${message.message}'),
+          GuestBookMessageWidget(
+            name: message.name,
+            message: message.message,
+            showDelete: shouldShowDelete(message.author),
+            deleteMessageCallback: () => widget.deleteMessage(message.id),
+          ),
         const SizedBox(height: 8),
       ],
     );
+  }
+
+  bool shouldShowDelete(String author) {
+    return widget.userUid != null ? author == widget.userUid : false;
   }
 }

@@ -97,6 +97,11 @@ class HomePage extends StatelessWidget {
                     addMessage: (String message) =>
                         appState.addMessageToGuestBook(message),
                     messages: appState._guestBookMessages,
+                    userUid: appState.userUid,
+                    deleteMessage: (String id) {
+                      print('id of message to be deleted: $id');
+                      appState.deleteMessageFromGuestBook(id);
+                    },
                   ),
                 ],
               ],
@@ -117,18 +122,25 @@ class ApplicationState extends ChangeNotifier {
 
   String? get email => _email;
 
+  String? _userUid;
+
+  String? get userUid => _userUid;
+
   StreamSubscription<QuerySnapshot>? _guestBookSubscription;
   List<GuestBookMessage> _guestBookMessages = [];
-  List<GuestBookMessage> get guestBookMessages => _guestBookMessages;
 
+  List<GuestBookMessage> get guestBookMessages => _guestBookMessages;
 
   StreamSubscription<DocumentSnapshot>? _attendingSubscription;
 
   int _attendees = 0;
+
   int get attendees => _attendees;
 
   Attending _attending = Attending.unknown;
+
   Attending get attending => _attending;
+
   set attending(Attending attending) {
     final userDoc = FirebaseFirestore.instance
         .collection('attendees')
@@ -159,10 +171,12 @@ class ApplicationState extends ChangeNotifier {
     FirebaseAuth.instance.userChanges().listen((user) {
       if (user != null) {
         _loginState = ApplicationLoginState.loggedIn;
+        _userUid = user.uid;
         fetchAndSetGuestBookMessages();
         initAttendingSubscription(user);
       } else {
         _loginState = ApplicationLoginState.loggedOut;
+        _userUid = null;
         _guestBookMessages = [];
         _guestBookSubscription?.cancel();
         _attendingSubscription?.cancel();
@@ -198,7 +212,7 @@ class ApplicationState extends ChangeNotifier {
         .orderBy('timestamp', descending: true)
         .snapshots()
         .listen(
-          (snapshot) {
+      (snapshot) {
         _guestBookMessages = [];
         snapshot.docs.forEach(addGuestBookMessageFromDocument);
         notifyListeners();
@@ -206,11 +220,14 @@ class ApplicationState extends ChangeNotifier {
     );
   }
 
-  void addGuestBookMessageFromDocument(dynamic document) {
+  void addGuestBookMessageFromDocument(
+      QueryDocumentSnapshot<Map<String, dynamic>> document) {
     _guestBookMessages.add(
       GuestBookMessage(
+        id: document.id,
         name: document.data()['name'] as String,
         message: document.data()['text'] as String,
+        author: document.data()['userId'] as String,
       ),
     );
   }
@@ -292,12 +309,27 @@ class ApplicationState extends ChangeNotifier {
       'userId': FirebaseAuth.instance.currentUser!.uid,
     });
   }
+
+  Future<void> deleteMessageFromGuestBook(String messageId) async {
+    await FirebaseFirestore.instance
+        .collection('guestbook')
+        .doc(messageId)
+        .delete();
+    notifyListeners();
+  }
 }
 
 class GuestBookMessage {
-  GuestBookMessage({required this.name, required this.message});
+  GuestBookMessage(
+      {required this.id,
+      required this.name,
+      required this.message,
+      required this.author});
+
+  final String id;
   final String name;
   final String message;
+  final String author;
 }
 
 enum Attending { yes, no, unknown }
