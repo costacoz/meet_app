@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:gtk_flutter/helpers/attending.dart';
 import 'package:gtk_flutter/models/guest_book_message.dart';
 import 'package:gtk_flutter/widgets/authentication.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 class ApplicationState extends ChangeNotifier {
   ApplicationLoginState _loginState = ApplicationLoginState.loggedOut;
@@ -53,6 +54,18 @@ class ApplicationState extends ChangeNotifier {
 
   Future<void> init() async {
     await Firebase.initializeApp();
+
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      print('Got a message whilst in the foreground!');
+      print('Message data: ${message.data}');
+      print('Message notification?.title: ${message.notification?.title}');
+      print('Message notification?.body: ${message.notification?.body}');
+      print('Message contentAvailable: ${message.contentAvailable}');
+
+      if (message.notification != null) {
+        print('Message also contained a notification: ${message.notification}');
+      }
+    });
 
     FirebaseFirestore.instance
         .collection('attendees')
